@@ -69,11 +69,11 @@ document.addEventListener("keydown", event => {
         $("#menu").focus();
     }
 });
-$("#site-footer").innerHTML =
+$("#site-footer").insertAdjacentHTML("beforeend",
     `<div class="footer-inner">${brand}<small>© ${new Date().getFullYear()} CiviConnect</small>
   <div class="footer-links"><a href="/submit.html">Candidate registration</a><a href="/admin-login.html">Admin</a><button id="contact-open">Contact us</button></div></div>
   <dialog id="contact-dialog"><div class="dialog-head"><h2>Contact CiviConnect</h2><button class="circle" data-close aria-label="Close">${icon("close")}</button></div>
-  <form class="form-stack" id="contact"><label>Name<input name="name" required maxlength="160" autocomplete="name"></label><label>Email<input type="email" name="email" required maxlength="254" autocomplete="email"></label><label>Message<textarea name="message" required maxlength="3000" rows="4"></textarea></label><button class="btn primary">Send message</button><p class="status" role="status"></p></form></dialog>`;
+  <form class="form-stack" id="contact"><label>Name<input name="name" required maxlength="160" autocomplete="name"></label><label>Email<input type="email" name="email" required maxlength="254" autocomplete="email"></label><label>Message<textarea name="message" required maxlength="3000" rows="4"></textarea></label><button class="btn primary">Send message</button><p class="status" role="status"></p></form></dialog>`);
 $("#contact-open").onclick = () => $("#contact-dialog").showModal();
 document.addEventListener("click", event => {
     if (event.target.closest("[data-close]")) event.target.closest("dialog")?.close();

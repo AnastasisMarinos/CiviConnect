@@ -58,30 +58,26 @@ TOPICS = [
 ]
 EXTRA = [
     (
-        "inquiry",
         "Budget",
         "Where can residents see the annual neighborhood spending breakdown?",
     ),
     (
-        "complaint",
         "Accessibility",
         "The curb ramp by Central Station is blocked most afternoons.",
     ),
-    ("question", "Sports", "Could community teams use the school field on weekends?"),
-    ("inquiry", "Public meetings", "Will evening council meetings have live captions?"),
+    ("Sports", "Could community teams use the school field on weekends?"),
+    ("Public meetings", "Will evening council meetings have live captions?"),
     (
-        "complaint",
         "Waste collection",
         "Our recycling pickup has missed Elm Street twice this month.",
     ),
-    ("question", "Water", "How will the city share drinking water test results?"),
+    ("Water", "How will the city share drinking water test results?"),
     (
-        "inquiry",
         "Town services",
         "Is there a single place to check the status of repair requests?",
     ),
-    ("complaint", "Lighting", "Several lights along the river path are broken."),
-    ("question", "Volunteering", "How can students help with neighborhood projects?"),
+    ("Lighting", "Several lights along the river path are broken."),
+    ("Volunteering", "How can students help with neighborhood projects?"),
 ]
 
 
@@ -135,7 +131,7 @@ def seed():
         tx.write(db.PEOPLE, people)
         replies = tx.read(db.REPLIES)
         for i, (topic, question, media, _) in enumerate(TOPICS):
-            sub = tx.add_submission("question", topic, question)
+            sub = tx.add_submission(topic, question)
             sub["politician_flags"][demos[i]["id"]] = "answered"
             replies.append(
                 dict(
@@ -153,8 +149,8 @@ def seed():
                 )
             )
         tx.write(db.REPLIES, replies)
-        for kind, topic, question in EXTRA:
-            tx.add_submission(kind, topic, question)
+        for topic, question in EXTRA:
+            tx.add_submission(topic, question)
     print_accounts(access)
 
 

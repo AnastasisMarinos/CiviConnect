@@ -100,11 +100,10 @@ class Transaction:
                 return name, record
         raise HTTPException(404, "Submission not found.")
 
-    def add_submission(self, kind, topic, content):
+    def add_submission(self, topic, content):
         stamp = now()
         record = dict(
             id=secrets.token_hex(10),
-            submission_type=kind,
             topic=topic,
             content=content,
             submitted_at=stamp,

@@ -136,7 +136,7 @@ async function startDashboard() {
 
     function submissions() {
         root.innerHTML =
-            `<h2>Citizen submissions</h2><p class="subtle">The JSONL feed preserves the original submissions. The JSON bundle includes current planning flags.</p><div class="toolbar"><a class="btn primary" href="/api/admin/export/llm-dataset?format=jsonl" download>Download JSONL</a><a class="btn" href="/api/admin/export/llm-dataset" download>Download JSON bundle</a></div>${data.submissions.map(s=>`<article class="record"><span class="tag">${esc(s.submission_type)}</span> <small>${esc(s.topic)} · ${dateText(s.submitted_at)}</small><p>${esc(s.content)}</p></article>`).join("")||empty("No citizen submissions yet.")}`;
+            `<h2>Citizen submissions</h2><p class="subtle">The JSONL feed preserves the original submissions. The JSON bundle includes current planning flags.</p><div class="toolbar"><a class="btn primary" href="/api/admin/export/llm-dataset?format=jsonl" download>Download JSONL</a><a class="btn" href="/api/admin/export/llm-dataset" download>Download JSON bundle</a></div>${data.submissions.map(s=>`<article class="record"><small>${s.topic ? esc(s.topic) + " · " : ""}${dateText(s.submitted_at)}</small><p>${esc(s.content)}</p></article>`).join("")||empty("No citizen submissions yet.")}`;
     }
 
     function contacts() {

@@ -8,36 +8,41 @@
   <link rel="icon" href="/static/assets/favicon.svg" type="image/svg+xml">
   <script src="/static/js/theme.js"></script>
   <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/home.css">
   <script type="module" src="/static/js/home.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header id="site-header"></header>
   <main id="main" class="wrap">
-    <section class="intro home-intro">
-      <div><div class="eyebrow"><span class="rule"></span><span data-election-area>Local election hub</span></div>
-      <h1>The public square<span class="period">.</span></h1>
-      <p>Your questions, answered by the candidates in your community.</p></div>
-      <a class="btn strong" href="#ask"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#question"/></svg> Ask a question</a>
+    <section id="ask" class="ask-hero" aria-labelledby="ask-title">
+      <div class="eyebrow"><span class="rule"></span><span data-election-area>Local election hub</span></div>
+      <h1 id="ask-title">What’s on your mind<span class="period">?</span></h1>
+      <p>Send your questions, concerns, and ideas to your local candidates.</p>
+      <form id="citizen-form">
+        <div class="composer">
+          <textarea name="content" rows="2" required maxlength="3000" aria-label="Your message to local candidates" placeholder="Ask a question or share a concern…"></textarea>
+          <div class="composer-tools"><span id="char-count">0 / 3,000</span><button type="submit" class="btn strong"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#send"/></svg> Send</button></div>
+        </div>
+        <p class="status" role="status"></p>
+      </form>
     </section>
     <section id="replies" aria-labelledby="replies-heading">
       <div class="section-head"><div class="heading-group"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#video"/></svg></span><h2 id="replies-heading">Candidate video replies</h2></div>
       <div class="carousel-nav"><span id="position"></span><button class="circle" id="prev" aria-label="Previous reply"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#left"/></svg></button><button class="circle" id="next" aria-label="Next reply"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#right"/></svg></button></div></div>
-      <div class="broadcast"><div id="featured" class="stage" aria-live="polite"><p class="loading">Loading candidate replies…</p></div>
-      <aside class="queue"><div class="queue-head"><h3>Up next</h3><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#list"/></svg></div><div id="up-next"></div><button class="see-all" id="all-replies"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#grid"/></svg> All video replies</button></aside></div>
+      <div id="reply-track" aria-label="Video replies" class="reply-track" tabindex="0"></div>
     </section>
-    <section class="countdown" aria-label="Next election countdown">
-      <div class="election-info"><span class="election-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#calendar"/></svg></span><div><div class="eyebrow">Election countdown</div><h2>Election day</h2><p id="election-date"></p></div></div>
-      <div class="digits" role="timer"><div><strong id="time-Days">––</strong><small>Days</small></div><div><strong id="time-Hours">––</strong><small>Hours</small></div><div><strong id="time-Minutes">––</strong><small>Minutes</small></div><div><strong id="time-Seconds">––</strong><small>Seconds</small></div></div>
+    <section class="featured-people" aria-labelledby="people-title">
+      <div class="section-head"><div class="heading-group"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#users"/></svg></span><h2 id="people-title">Featured politicians</h2></div></div>
+      <div id="featured-grid"></div>
+      <div class="directory-action"><a class="btn" href="/politicians.html">View all politicians</a></div>
     </section>
-    <section id="ask" class="submission-block"><div class="submission-intro"><div class="eyebrow"><span class="rule"></span>Citizen submissions</div><h2>Have your say<span class="period">.</span></h2><p>What should local candidates address? Share a question, inquiry, or complaint with the candidate panel.</p></div>
-      <form id="citizen-form" class="panel form-stack">
-      <fieldset><legend>Submission type</legend><div class="pills"><label><input type="radio" name="submission_type" value="question" checked><span>Question</span></label><label><input type="radio" name="submission_type" value="inquiry" ><span>Inquiry</span></label><label><input type="radio" name="submission_type" value="complaint" ><span>Complaint</span></label></div></fieldset>
-      <label>Your message<textarea name="content" rows="4" maxlength="3000" placeholder="What’s on your mind?" required></textarea></label>
-      <label>Topic or neighborhood <span class="optional">Optional</span><input name="topic" maxlength="120" placeholder="e.g. Housing, Riverside"></label>
-      <div class="actions"><button class="btn primary"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#send"/></svg> Send submission</button></div><p class="status" role="status"></p></form>
-    </section>
-    <dialog id="reply-dialog"><div class="dialog-head"><h2>All video replies</h2><button class="circle" data-close aria-label="Close"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#close"/></svg></button></div><div id="reply-list"></div></dialog></main>
-  <footer id="site-footer"></footer>
+  </main>
+  <footer id="site-footer">
+    <div class="footer-election wrap" aria-label="Election countdown">
+      <span class="election-label"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#calendar"/></svg><strong id="election-label">Election day</strong> <span id="election-date"></span></span>
+      <span class="footer-clock" role="timer"><span><b id="time-Days">––</b>days</span> <span><b id="time-Hours">––</b>hours</span> <span><b id="time-Minutes">––</b>minutes</span> <span><b id="time-Seconds">––</b>seconds</span></span>
+    </div>
+  </footer>
 </body>
 </html>

@@ -19,8 +19,7 @@ async function startDashboard() {
     const root = $("#workspace");
     let data, selected = 0,
         sourceQuestion = null,
-        query = "",
-        kind = "";
+        query = "";
     bindLogout("politician");
     const reload = async () => {
         data = await api("/api/politician/workspace");
@@ -39,14 +38,13 @@ async function startDashboard() {
 
     function planner() {
         root.innerHTML =
-            `<h2>Citizen submissions</h2><div class="toolbar"><input id="plan-search" type="search" aria-label="Search submissions" placeholder="Search questions or topics" value="${esc(query)}"><select id="plan-kind" aria-label="Submission type"><option value="">All submission types</option><option value="question">Question</option><option value="inquiry">Inquiry</option><option value="complaint">Complaint</option></select></div><div id="plans"></div>`;
-        $("#plan-kind").value = kind;
+            `<h2>Citizen submissions</h2><div class="toolbar"><input id="plan-search" type="search" aria-label="Search submissions" placeholder="Search questions or topics" value="${esc(query)}"></div><div id="plans"></div>`;
 
         function list() {
-            const items = data.submissions.filter(s => (!kind || s.submission_type === kind) && (s
+            const items = data.submissions.filter(s => (s
                 .content + " " + s.topic).toLowerCase().includes(query.toLowerCase()));
             $("#plans").innerHTML = items.map(s =>
-                `<article class="record"><span class="tag">${esc(s.submission_type)}</span> <small>${esc(s.topic)} · ${dateText(s.submitted_at)}</small>
+                `<article class="record"><small>${s.topic ? esc(s.topic) + " · " : ""}${dateText(s.submitted_at)}</small>
               <h3>${esc(s.content)}</h3><form class="form-stack" data-plan="${esc(s.id)}"><div class="two-col"><label>Planning status<select name="flag">${[["","Unmarked"],["planned","Planned"],["answered","Answered"]].map(([v,t])=>`<option value="${v}" ${s.politician_flags[data.profile.id]===v?"selected":""}>${t}</option>`).join("")}</select></label><label>Private campaign note<textarea name="note" rows="2" maxlength="3000">${esc(data.notes[s.id])}</textarea></label></div>
               <div class="actions"><button class="btn">Save plan</button><button class="btn primary" type="button" data-reply="${esc(s.id)}">Reply with video</button></div><p class="status" role="status"></p></form></article>`
                 ).join("") || empty("No submissions match these filters.");
@@ -69,10 +67,6 @@ async function startDashboard() {
         }
         $("#plan-search").oninput = e => {
             query = e.target.value;
-            list();
-        };
-        $("#plan-kind").onchange = e => {
-            kind = e.target.value;
             list();
         };
         list();

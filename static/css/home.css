@@ -1,0 +1,79 @@
+/* The composer is the landing page's primary action. */
+.ask-hero {
+  text-align: center;
+  padding: clamp(2.5rem, 5vw, 5rem) 0 clamp(2.5rem, 4vw, 4rem);
+  background: radial-gradient(ellipse at center, var(--tint), transparent 68%);
+}
+.ask-hero .eyebrow { justify-content: center; }
+.ask-hero h1 { margin: .7rem 0; font-size: clamp(2.35rem, 5vw, 4.5rem); }
+.ask-hero > p { color: var(--muted); }
+#citizen-form { width: min(100%, 720px); margin: 1.5rem auto 0; }
+.composer {
+  padding: .9rem 1.05rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--paper);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--text) 6%, transparent);
+}
+.composer:focus-within { border-color: var(--primary); }
+.composer textarea {
+  display: block; width: 100%; margin: 0; padding: .35rem;
+  resize: none; min-height: 4rem; max-height: 14rem;
+  border: 0; outline: none; background: transparent; font: inherit;
+}
+.composer-tools { display: flex; align-items: center; justify-content: space-between; }
+.composer-tools span { color: var(--muted); font-size: .8rem; }
+.composer-tools button { border-radius: 2rem; padding-inline: 1.2rem; }
+#citizen-form .status { margin-top: .6rem; }
+.reply-track {
+  display: flex; gap: 1rem; overflow-x: auto; padding-bottom: .55rem;
+  scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+  scrollbar-width: thin; scrollbar-color: var(--secondary) transparent;
+}
+.reply-track.gliding { scroll-snap-type: none; }
+.reply-card {
+  flex: 0 0 calc((100% - 2rem) / 3); min-width: 0;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden; scroll-snap-align: start;
+}
+.reply-card .stage { height: clamp(255px, 22vw, 340px); border-radius: 0; }
+.reply-card .stage-top { inset: .85rem .85rem auto; }
+.reply-card .featured-content { bottom: 1rem; left: 1rem; right: 1rem; }
+.reply-card .featured-content h3 { font-size: clamp(1.2rem, 1.75vw, 1.6rem); margin: .4rem 0 0; }
+.reply-card .play-main { width: 48px; height: 48px; }
+.reply-card .featured-content .person-line { display: none; }
+.reply-card .stage-player > video:not(.ambient) { width: 100%; height: 100%; object-fit: contain; }
+.reply-author, .featured-person {
+  display: flex; align-items: center; gap: .7rem; padding: .9rem 1rem;
+  text-decoration: none; overflow-wrap: anywhere;
+}
+.reply-author:hover strong, .featured-person:hover strong { text-decoration: underline; }
+.reply-author .avatar { width: 38px; height: 38px; }
+.reply-author small, .featured-person small { display: block; color: var(--muted); }
+.featured-people { margin: 2.5rem 0 1rem; }
+#featured-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; }
+.featured-person { border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.featured-person .avatar { width: 56px; height: 56px; }
+.directory-action { margin-top: 1.3rem; text-align: center; }
+@media (max-width: 900px) {
+  .reply-card { flex-basis: 45%; }
+  #featured-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .reply-card { flex-basis: 86%; }
+  #featured-grid { grid-template-columns: 1fr; }
+}
+
+.footer-election {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .45rem 1rem;
+  padding: .9rem 0 .7rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .82rem;
+}
+.election-label, .footer-clock { display: inline-flex; align-items: center; gap: .55rem; }
+.footer-clock b { font-variant-numeric: tabular-nums; margin-right: .2em; font-weight: 600; }
+.footer-election + .footer-inner { padding-block: .9rem; }

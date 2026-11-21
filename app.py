@@ -148,7 +148,6 @@ Email = Annotated[
 
 
 class Submission(Model):
-    submission_type: Literal["question", "inquiry", "complaint"]
     topic: str = Field(default="", max_length=120)
     content: str = Field(min_length=1, max_length=3000)
 
@@ -156,7 +155,7 @@ class Submission(Model):
 @app.post("/api/submissions", status_code=201)
 def submit(body: Submission):
     with db.transaction() as tx:
-        row = tx.add_submission(body.submission_type, body.topic, body.content)
+        row = tx.add_submission(body.topic, body.content)
         return {"id": row["id"]}
 
 

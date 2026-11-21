@@ -764,11 +764,12 @@ p {
   background: color-mix(in srgb, var(--secondary) 43%, var(--background))
 }
 
-.countdown:before {
+#site-footer::before {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: -150% 20% -180% 26%;
+  inset: -150% -8% -180%;
+  pointer-events: none;
   background: repeating-radial-gradient(ellipse at 5% 64%, transparent 0 12px, color-mix(in srgb, var(--primary) 23%, transparent) 13px, transparent 14px);
   transform: rotate(-28deg);
   mask-image: linear-gradient(90deg, transparent, #000 26%, #000 65%, transparent)
@@ -1256,6 +1257,10 @@ select {
 }
 
 #site-footer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--secondary) 18%, var(--background));
   border-top: 1px solid var(--line);
   margin-top: 3.3rem
 }
