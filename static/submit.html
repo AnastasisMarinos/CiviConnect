@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Candidate registration · CiviConnect</title>
+  <link rel="icon" href="/static/assets/favicon.svg" type="image/svg+xml">
+  <script src="/static/js/theme.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script type="module" src="/static/js/submit.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header id="site-header"></header>
+  <main id="main" class="wrap"><div class="intro"><div><div class="eyebrow"><span class="rule"></span>Candidate registration</div><h1>Join the conversation<span class="period">.</span></h1><p>Apply for verification to publish replies and plan around the issues residents raise.</p></div></div><form id="application" class="panel form-stack wide-form" enctype="multipart/form-data"><h2>Candidate details</h2><div class="two-col"><label>Full name<input name="name" required maxlength="160" autocomplete="name"></label><label>Political party or affiliation<input name="party" required maxlength="160"></label></div><label>Verification email<input name="verification_email" type="email" required maxlength="254" autocomplete="email"><small>Used privately to contact you about your application.</small></label><label>Profile photo<input type="file" required name="photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG, or WebP, up to 8 MB.</small></label><div id="detail-fields"></div><button class="btn primary">Submit for verification</button><p class="status" role="status"></p></form></main>
+  <footer id="site-footer"></footer>
+</body>
+</html>

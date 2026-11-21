@@ -1,0 +1,47 @@
+/* Five brand tokens. Components use the semantic colors derived below. */
+:root,
+:root[data-theme="light"] {
+  --text: #0c0c08;
+  --background: #f9faf6;
+  --primary: #a1ae5c;
+  --secondary: #cad49b;
+  --accent: #c0ce7d;
+  --paper: #fff;
+  --muted: #62665b;
+  --line: #dcdfd3;
+  --ink: #20251c;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --text: #f7f7f3;
+  --background: #090a05;
+  --primary: #96a451;
+  --secondary: #59642b;
+  --accent: #748131;
+  --paper: #15170f;
+  --muted: #b4b8a8;
+  --line: #34392a;
+  --ink: #edf0e6;
+  color-scheme: dark;
+}
+
+@media(prefers-color-scheme:dark) {
+  :root:not([data-theme]) {
+    --text: #f7f7f3;
+    --background: #090a05;
+    --primary: #96a451;
+    --secondary: #59642b;
+    --accent: #748131;
+    --paper: #15170f;
+    --muted: #b4b8a8;
+    --line: #34392a;
+    --ink: #edf0e6;
+    color-scheme: dark;
+  }
+}
+
+:root {
+  --tint: color-mix(in srgb, var(--secondary) 25%, var(--paper));
+  --eyebrow: color-mix(in srgb, var(--primary) 58%, var(--text));
+}
