@@ -1178,7 +1178,7 @@ main {
 }
 .profile-hero .initials { font-size: var(--text-m); }
 
-#party-filter { width: min(100%, 21rem); max-width: 100%; margin-top: 0; }
+#party-filter { width: 21rem; min-width: 0; margin-top: 0; }
 .directory-tools { flex-wrap: wrap; gap: .65rem; }
 .directory-tools .search { flex: 1 1 16rem; }
 .directory-refine {
@@ -1186,9 +1186,9 @@ main {
   align-items: center;
   gap: .65rem;
   min-width: 0;
+  max-width: 100%;
   margin-inline-start: auto;
 }
-.directory-refine select { min-width: 0; }
 #result-count { white-space: nowrap; }
 #workspace .record { overflow-wrap: anywhere; }
 #workspace .record .person-line { max-width: 100%; }
