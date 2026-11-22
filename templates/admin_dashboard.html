@@ -1,19 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="el">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Admin dashboard · CiviConnect</title>
-  <link rel="icon" href="/static/assets/favicon.svg" type="image/svg+xml">
-  <script src="/static/js/theme.js"></script>
-  <link rel="stylesheet" href="/static/css/style.css">
-  <script type="module" src="/static/js/admin.js"></script>
+  <title>Πίνακας διαχείρισης · CiviConnect</title>
+  <link rel="icon" href="/static/assets/favicon.svg?v=brand-mark" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap">
+  <link rel="stylesheet" href="/static/css/style.css?v=brand-mark">
+  <script type="module" src="/static/js/admin.js?v=workspace-cleanup"></script>
 </head>
 <body data-role="admin">
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip" href="#main">Μετάβαση στο περιεχόμενο</a>
   <header id="site-header"></header>
-  <main id="main" class="wrap"><div class="intro"><div><div class="eyebrow"><span class="rule"></span>Private workspace</div><h1>Admin dashboard<span class="period">.</span></h1><p id="workspace-name"></p></div><button class="btn" id="logout">Sign out</button></div><nav class="tabs" aria-label="Dashboard sections"><button data-tab="0" class="active">Verifications</button><button data-tab="1" class="">Manage candidates & replies</button><button data-tab="2" class="">Submissions & exports</button><button data-tab="3" class="">Contact messages</button></nav><div id="dashboard-status" role="status" class="status"></div><section id="workspace"></section></main>
+  <main id="main" class="wrap"><div class="intro"><div><div class="eyebrow"><span class="rule"></span>Ιδιωτικός χώρος εργασίας</div><h1>Πίνακας διαχείρισης<span class="period">.</span></h1><p id="workspace-name"></p></div><button class="btn" id="logout">Αποσύνδεση</button></div><nav class="tabs" aria-label="Ενότητες πίνακα"><button data-tab="0" class="active">Επαληθεύσεις</button><button data-tab="1" class="">Διαχείριση υποψηφίων</button><button data-tab="2" class="">Μηνύματα επικοινωνίας</button></nav><div id="dashboard-status" role="status" class="status"></div><section id="workspace"></section></main>
   <footer id="site-footer"></footer>
 </body>
 </html>

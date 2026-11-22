@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "Hackathon Athens",
+  "party": "Hackathon Party",
+  "role": "Δημοτικός Εκπρόσωπος",
+  "description": "Ο Δήμος Αθηναίων προχωράει στην διοργάνωση του 3ου Μαραθωνίου Καινοτομίας Apps4Athens 3.0 Gov Hackathon, με στόχο τον ψηφιακό μετασχηματισμό της πόλης μέσα από την αξιοποίηση των ανοιχτών δεδομένων, της ψηφιακής διακυβέρνησης, της διαλειτουργικότητας και της Τεχνητής Νοημοσύνης (AI), με επίκεντρο τις ανάγκες και την ενεργό συμμετοχή των πολιτών.",
+  "statements": [
+    "AthensGov – Ανοιχτά Δεδομένα & Διαλειτουργικότητα.",
+    "Έξυπνη Πόλη & Ψηφιακές Υποδομές.",
+    "Πολίτης & Ψηφιακή Εξυπηρέτηση",
+    "Περιβάλλον & Βιωσιμότητα"
+  ],
+  "photo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0zV1CBxkp5LmIVvTqNqZilMAHArQzIQCG8k2lUDFjuA&s=10",
+  "socials": {
+    "facebook": "https://www.facebook.com/crowdhackathon",
+    "instagram": "https://www.instagram.com/crowdpolicy/",
+    "linkedin": "https://www.linkedin.com/company/crowdpolicy/",
+    "x": "https://x.com/crowdpolicy",
+    "youtube": "https://www.youtube.com/channel/UCi1_NLR3FOQsqjacJuaWHEw"
+  }
+}

@@ -2,31 +2,41 @@
 
 import hashlib
 import hmac
+import logging
 import re
-import secrets
+import os
+from time import monotonic
+from xml.etree import ElementTree
 import time
 from collections import defaultdict, deque
 from datetime import datetime
 from threading import Lock
 from typing import Annotated, Literal
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from itsdangerous import BadSignature, URLSafeTimedSerializer
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
 
-import storage as db
+from . import storage as db
+from .opencouncil.directory import GROUPS
+from .runtime_build import build_identifier
+from .search import topic_ranker, verification
+from .youtube import channel_videos
 
 db.initialize()
 config = db.configuration()
-election = datetime.fromisoformat(config["election_datetime_iso"])
-if election.tzinfo is None:
+if config["election_datetime_iso"] and datetime.fromisoformat(config["election_datetime_iso"]).tzinfo is None:
     raise ValueError("election_datetime_iso must include a timezone offset")
 app = FastAPI(title="CiviConnect", docs_url=None, redoc_url=None)
+BUILD = build_identifier()
 signer = URLSafeTimedSerializer(config["session_secret_key"])
 SESSION_TTL = 8 * 3600
+DEMO_PROFILE_ID = "demo-fictional-profile"
+PROFILE_LINKS = ("x", "instagram", "tiktok", "facebook", "linkedin", "youtube", "website")
+logger = logging.getLogger(__name__)
 STATIC = db.ROOT / "static"
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 PUBLIC_FIELDS = (
@@ -44,28 +54,32 @@ PUBLIC_FIELDS = (
 
 @app.middleware("http")
 async def boundaries(request, call_next):
+    if request.url.path.casefold().startswith("/static/uploads/videos/"):
+        return Response(status_code=404)
     if request.method in {"POST", "PATCH", "DELETE", "PUT"}:
         origin = request.headers.get("origin")
         if origin and origin != str(request.base_url).rstrip("/"):
             return JSONResponse(
-                {"detail": "Cross-origin write rejected."}, status_code=403
+                {"detail": "Το αίτημα πρέπει να προέρχεται από το CiviConnect."}, status_code=403
             )
         length = request.headers.get("content-length")
         if request.headers.get("transfer-encoding") or (
             length and not length.isdigit()
         ):
             return JSONResponse(
-                {"detail": "A fixed request size is required."}, status_code=411
+                {"detail": "Το αίτημα πρέπει να δηλώνει το μέγεθος των δεδομένων."}, status_code=411
             )
         if length and int(length) > 65 * 1024**2:
-            return JSONResponse({"detail": "Upload exceeds 65 MB."}, status_code=413)
+            return JSONResponse({"detail": "Το μέγεθος των δεδομένων υπερβαίνει τα 65 MB."}, status_code=413)
     result = await call_next(request)
     result.headers["X-Content-Type-Options"] = "nosniff"
     result.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     result.headers["X-Frame-Options"] = "DENY"
     result.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https://i.ytimg.com; media-src 'self'; "
+        "default-src 'self'; script-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https://i.ytimg.com; media-src 'none'; "
         "frame-src https://www.youtube-nocookie.com; object-src 'none'; "
         "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     )
@@ -77,28 +91,26 @@ async def boundaries(request, call_next):
 
 
 def public_person(person):
-    return {k: person[k] for k in PUBLIC_FIELDS}
+    result = {k: person[k] for k in PUBLIC_FIELDS}
+    result.update({k: person.get(k) for k in ("role", "party_id", "opencouncil_id")})
+    return result
+
+
+def publicly_listed(person):
+    return person["status"] in ("verified", "unclaimed") and person.get("source_active", True)
 
 
 def find_person(people, pid):
     for person in people:
         if person["id"] == pid:
             return person
-    raise HTTPException(404, "Candidate not found.")
+    raise HTTPException(404, "Το προφίλ δεν βρέθηκε.")
 
 
-def joined_replies(tx):
-    people = {p["id"]: p for p in tx.read(db.PEOPLE) if p["status"] == "verified"}
-    return [
-        dict(
-            r,
-            **{k: people[r["politician_id"]][k] for k in ("name", "party", "photo_url")}
-        )
-        for r in sorted(
-            tx.read(db.REPLIES), key=lambda r: r["created_at"], reverse=True
-        )
-        if r["politician_id"] in people
-    ]
+@app.get("/api/health", include_in_schema=False)
+def health(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return {"app": "CiviConnect", "build": BUILD}
 
 
 @app.get("/api/config")
@@ -106,27 +118,58 @@ def public_config():
     return {k: config[k] for k in ("municipality_name", "election_datetime_iso")}
 
 
+@app.get("/api/parties")
+def municipal_groups():
+    with db.transaction() as tx:
+        return tx.read(GROUPS) if (db.DATA / GROUPS).exists() else []
+
+
 @app.get("/api/politicians")
 def directory():
     with db.transaction() as tx:
-        return [
-            public_person(p) for p in tx.read(db.PEOPLE) if p["status"] == "verified"
-        ]
+        people = tx.read(db.PEOPLE)
+        listed = [public_person(p) for p in people if publicly_listed(p)]
+        demo = demo_person(people)
+        if demo:
+            listed.append(demo)
+        return listed
 
 
 @app.get("/api/politicians/{pid}")
 def profile(pid: str):
     with db.transaction() as tx:
-        person = find_person(tx.read(db.PEOPLE), pid)
-        if person["status"] != "verified":
-            raise HTTPException(404, "Candidate not found.")
+        people = tx.read(db.PEOPLE)
+        if pid == DEMO_PROFILE_ID:
+            demo = demo_person(people)
+            if demo:
+                return demo
+        person = find_person(people, pid)
+        if not publicly_listed(person):
+            raise HTTPException(404, "Το προφίλ δεν βρέθηκε.")
         return public_person(person)
 
 
+@app.get("/api/politicians/{pid}/news")
+def politician_news(pid: str, limit: Annotated[int, Query(ge=1, le=verification.PERSON_NEWS_LIMIT)] = 2):
+    person = profile(pid)
+    try:
+        return verification.person_headlines(person["name"], int(monotonic() // 900))[:limit]
+    except (OSError, ValueError, ElementTree.ParseError):
+        raise HTTPException(502, "Το Google News δεν είναι προσωρινά διαθέσιμο.")
+
+
 @app.get("/api/video-replies")
-def replies():
-    with db.transaction() as tx:
-        return joined_replies(tx)
+def videos():
+    channel = os.getenv("YOUTUBE_CHANNEL_ID") or config.get("youtube_channel_id", "")
+    if not channel:
+        return []
+    if not re.fullmatch(r"UC[A-Za-z0-9_-]{22}", channel):
+        raise HTTPException(503, "Το αναγνωριστικό του καναλιού YouTube δεν είναι έγκυρο.")
+    try:
+        return channel_videos(channel, int(monotonic() // 300))
+    except (OSError, ValueError):
+        raise HTTPException(502, "Το κανάλι YouTube δεν είναι προσωρινά διαθέσιμο.")
+
 
 
 class Model(BaseModel):
@@ -147,16 +190,13 @@ Email = Annotated[
 ]
 
 
-class Submission(Model):
-    topic: str = Field(default="", max_length=120)
-    content: str = Field(min_length=1, max_length=3000)
+class CivicQuestion(Model):
+    question: str = Field(min_length=1, max_length=3000)
 
 
-@app.post("/api/submissions", status_code=201)
-def submit(body: Submission):
-    with db.transaction() as tx:
-        row = tx.add_submission(body.topic, body.content)
-        return {"id": row["id"]}
+@app.post("/api/athens/answer")
+def civic_answer(body: CivicQuestion):
+    return topic_ranker.answer(body.question, config)
 
 
 class Contact(Model):
@@ -176,16 +216,16 @@ def contact(body: Contact):
 
 
 class Details(Model):
-    description: str = Field(min_length=1, max_length=3000)
-    statements: list[Statement] = Field(min_length=3, max_length=5)
+    description: str = Field(default="", max_length=3000)
+    statements: list[Statement] = Field(default_factory=list, max_length=5)
     socials: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("socials")
     @classmethod
     def valid_links(cls, links):
         for key, value in links.items():
-            if key not in ("x", "instagram", "tiktok", "website"):
-                raise ValueError("Unknown social network")
+            if key not in PROFILE_LINKS:
+                raise ValueError("Άγνωστο κοινωνικό δίκτυο.")
             if value:
                 parsed = urlsplit(value)
                 if (
@@ -195,44 +235,65 @@ class Details(Model):
                     or parsed.username
                     or "\\" in value
                 ):
-                    raise ValueError("Social links must be full http or https URLs")
-        return {k: links.get(k, "") for k in ("x", "instagram", "tiktok", "website")}
+                    raise ValueError("Οι σύνδεσμοι πρέπει να είναι πλήρεις διευθύνσεις HTTP ή HTTPS.")
+        return {key: links.get(key, "") for key in PROFILE_LINKS}
 
 
-class Application(Details):
-    name: Short
-    party: Short
+class Claim(Details):
     verification_email: Email
 
 
-@app.post("/api/politicians/apply", status_code=201)
-def apply_candidate(
-    application: Annotated[str, Form()], photo: Annotated[UploadFile, File()]
-):
-    from pydantic import ValidationError
+class DemoProfile(Details):
+    enabled: bool = True
+    name: Short
+    party: str = Field(default="", max_length=160)
+    role: str = Field(default="", max_length=160)
+    photo_url: str = Field(default="", pattern=r"^(?:/static/[\w./%-]+)?$")
 
+
+def demo_person(people):
+    if any(person["id"] == DEMO_PROFILE_ID for person in people):
+        return None
     try:
-        body = Application.model_validate_json(application)
+        text = (db.DATA / "demo_profile.json").read_text(encoding="utf-8-sig")
+        demo = DemoProfile.model_validate_json(text)
+    except FileNotFoundError:
+        return None
+    except ValidationError as exc:
+        fields = ", ".join(".".join(map(str, error["loc"])) for error in exc.errors(include_input=False))
+        logger.warning("Could not load data/demo_profile.json. Check these fields: %s.", fields)
+        return None
+    except (OSError, ValueError):
+        logger.warning("Could not load data/demo_profile.json. Check the fields against demo-profile.example.json.")
+        return None
+    if not demo.enabled:
+        return None
+    return public_person(dict(demo.model_dump(), id=DEMO_PROFILE_ID, status="demo", created_at=None))
+
+
+def parse_form(model, value):
+    try:
+        return model.model_validate_json(value)
     except ValidationError as exc:
         raise HTTPException(422, exc.errors(include_context=False, include_input=False))
+
+
+@app.post("/api/politicians/{pid}/claim", status_code=201)
+def request_claim(
+    pid: str,
+    application: Annotated[str, Form()],
+    photo: Annotated[UploadFile | None, File()] = None,
+):
+    body = parse_form(Claim, application)
     with db.transaction() as tx:
         people = tx.read(db.PEOPLE)
-        if any(
-            p["verification_email"].casefold() == body.verification_email.casefold()
-            for p in people
-        ):
-            raise HTTPException(409, "An application already exists for this email.")
-        person = dict(
-            **body.model_dump(),
-            id=db.slug(body.name, people),
-            status="pending",
-            login_username=None,
-            password_hash=None,
-            planner_notes={},
-            created_at=db.now(),
-            photo_url=db.save_profile_photo(photo)
-        )
-        tx.write(db.PEOPLE, [*people, person])
+        person = find_person(people, pid)
+        if not publicly_listed(person) or person["status"] != "unclaimed" or person.get("claim"):
+            raise HTTPException(409, "Το προφίλ δεν είναι διαθέσιμο για διεκδίκηση.")
+        claim = body.model_dump()
+        claim["photo"] = db.save_profile_photo(photo, private=True) if photo else None
+        person["claim"] = claim
+        tx.write(db.PEOPLE, people)
     return {"status": "pending"}
 
 
@@ -257,7 +318,7 @@ def limit(key):
         if len(attempts[key]) >= 5:
             raise HTTPException(
                 429,
-                "Too many attempts. Try again in five minutes.",
+                "Υπερβολικά πολλές προσπάθειες. Δοκιμάστε ξανά σε πέντε λεπτά.",
                 headers={"Retry-After": "300"},
             )
         attempts[key].append(time.monotonic())
@@ -303,7 +364,7 @@ def login(
             else {}
         )
     if not valid:
-        raise HTTPException(401, "Username or password is incorrect.")
+        raise HTTPException(401, "Το όνομα χρήστη ή ο κωδικός πρόσβασης είναι λάθος.")
     with attempt_lock:
         attempts.pop(key, None)
     response.set_cookie(
@@ -326,7 +387,7 @@ def session(request, role):
             max_age=SESSION_TTL,
         )
     except BadSignature:
-        raise HTTPException(401, "Please sign in.")
+        raise HTTPException(401, "Συνδεθείτε για να συνεχίσετε.")
     if role == "admin":
         active = identity["version"] == fingerprint(config["admin_password"])
     else:
@@ -338,7 +399,7 @@ def session(request, role):
                 for p in tx.read(db.PEOPLE)
             )
     if not active:
-        raise HTTPException(401, "Please sign in again.")
+        raise HTTPException(401, "Συνδεθείτε ξανά για να συνεχίσετε.")
     return identity["id"]
 
 
@@ -360,113 +421,26 @@ def logout(role: Literal["admin", "politician"], response: Response):
 def workspace(pid=Depends(politician)):
     with db.transaction() as tx:
         person = find_person(tx.read(db.PEOPLE), pid)
-        submissions = [
-            dict(
-                s,
-                politician_flags=(
-                    {pid: s["politician_flags"][pid]}
-                    if pid in s["politician_flags"]
-                    else {}
-                ),
-            )
-            for _, s in tx.submissions()
-        ]
-        return {
-            "profile": public_person(person),
-            "notes": person["planner_notes"],
-            "submissions": submissions,
-            "replies": [r for r in joined_replies(tx) if r["politician_id"] == pid],
-        }
-
-
-class Plan(Model):
-    flag: Literal["planned", "answered", ""] = ""
-    note: str = Field(default="", max_length=3000)
-
-
-@app.put("/api/politician/planner/{sid}")
-def update_plan(sid: str, body: Plan, pid=Depends(politician)):
-    with db.transaction() as tx:
-        filename, sub = tx.submission(sid)
-        people = tx.read(db.PEOPLE)
-        person = find_person(people, pid)
-        if body.flag:
-            sub["politician_flags"][pid] = body.flag
-        else:
-            sub["politician_flags"].pop(pid, None)
-        if body.note:
-            person["planner_notes"][sid] = body.note
-        else:
-            person["planner_notes"].pop(sid, None)
-        tx.write(filename, sub)
-        tx.write(db.PEOPLE, people)
-    return {"ok": True}
-
-
-def parse_youtube(url):
-    parts = urlsplit(url)
-    host = (parts.hostname or "").lower()
-    pieces = parts.path.strip("/").split("/")
-    vid = ""
-    shorts = False
-    if parts.scheme in ("https", "http") and not parts.username:
-        if host == "youtu.be" and len(pieces) == 1:
-            vid = pieces[0]
-        elif host in ("www.youtube.com", "youtube.com", "m.youtube.com"):
-            if pieces == ["watch"]:
-                vid = parse_qs(parts.query).get("v", [""])[0]
-            elif len(pieces) == 2 and pieces[0] == "shorts":
-                vid, shorts = pieces[1], True
-    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", vid):
-        raise HTTPException(422, "Enter a valid YouTube or Shorts URL.")
-    return vid, shorts
-
-
-@app.post("/api/politician/replies", status_code=201)
-def publish(
-    question_prompt: Annotated[str, Form(min_length=1, max_length=3000)],
-    question_id: Annotated[str, Form()] = "",
-    youtube_url: Annotated[str, Form(max_length=512)] = "",
-    aspect_ratio: Annotated[Literal["auto", "horizontal", "vertical"], Form()] = "auto",
-    video: Annotated[UploadFile | None, File()] = None,
-    pid=Depends(politician),
-):
-    if bool(youtube_url.strip()) == bool(video) or not question_prompt.strip():
-        raise HTTPException(422, "Enter a question and choose one video source.")
-    yt, shorts = parse_youtube(youtube_url) if youtube_url else (None, False)
-    with db.transaction() as tx:
-        prompt, topic = question_prompt.strip(), ""
-        if question_id:
-            filename, sub = tx.submission(question_id)
-            prompt, topic = sub["content"], sub["topic"]
-            sub["politician_flags"][pid] = "answered"
-            tx.write(filename, sub)
-        record = dict(
-            id=secrets.token_hex(10),
-            politician_id=pid,
-            question_id=question_id or None,
-            question_prompt=prompt,
-            topic=topic,
-            source_type="upload" if video else "youtube",
-            youtube_id=yt,
-            video_url=db.save_reply_video(video) if video else None,
-            aspect_ratio=(
-                ("vertical" if shorts else "horizontal")
-                if aspect_ratio == "auto"
-                else aspect_ratio
-            ),
-            created_at=db.now(),
-        )
-        tx.write(db.REPLIES, [*tx.read(db.REPLIES), record])
-    return {"id": record["id"]}
+        return {"profile": public_person(person)}
 
 
 @app.put("/api/politician/profile")
-def edit_self(body: Details, pid=Depends(politician)):
+def edit_self(
+    profile: Annotated[str, Form()],
+    photo: Annotated[UploadFile | None, File()] = None,
+    pid=Depends(politician),
+):
+    body = parse_form(Details, profile)
+    old_photo = None
     with db.transaction() as tx:
         people = tx.read(db.PEOPLE)
-        find_person(people, pid).update(body.model_dump())
+        person = find_person(people, pid)
+        if photo:
+            old_photo = person["photo_url"]
+            person["photo_url"] = db.save_profile_photo(photo)
+        person.update(body.model_dump())
         tx.write(db.PEOPLE, people)
+    db.remove_upload(old_photo)
     return {"ok": True}
 
 
@@ -479,23 +453,50 @@ def admin_workspace():
         ]
         return {
             "people": people,
-            "replies": joined_replies(tx),
-            "submissions": [s for _, s in tx.submissions()],
             "contacts": tx.read(db.CONTACTS)[::-1],
         }
 
 
+@app.get("/api/admin/politicians/{pid}/claim-photo", dependencies=[Depends(admin)])
+def claim_photo(pid: str):
+    with db.transaction() as tx:
+        person = find_person(tx.read(db.PEOPLE), pid)
+        photo = (person.get("claim") or {}).get("photo")
+        if not photo:
+            raise HTTPException(404)
+        return FileResponse(db.DATA / "claim_photos" / photo, media_type="image/jpeg")
+
+
 @app.post("/api/admin/politicians/{pid}/{action}", dependencies=[Depends(admin)])
-def issue(pid: str, action: Literal["approve", "regenerate"]):
+def issue(pid: str, action: Literal["approve", "regenerate", "reject"]):
+    staged_photo = None
     with db.transaction() as tx:
         people = tx.read(db.PEOPLE)
         person = find_person(people, pid)
-        if (action == "approve") != (person["status"] == "pending"):
-            raise HTTPException(
-                409, "This candidate's verification status has changed."
-            )
-        result = db.credentials(person)
+        claim = person.get("claim")
+        if action == "regenerate" and person["status"] == "verified":
+            result = db.credentials(person)
+        elif action == "approve" and (person["status"] == "pending" or
+                                      (claim and publicly_listed(person) and person["status"] == "unclaimed")):
+            if claim:
+                person.update({k: v for k, v in claim.items() if k != "photo"})
+                if claim["photo"]:
+                    filename = claim["photo"]
+                    staged_photo = db.DATA / "claim_photos" / filename
+                    db.atomic_write(db.UPLOADS / "photos" / filename, staged_photo.read_bytes())
+                    person["photo_url"] = "/static/uploads/photos/" + filename
+                person.pop("claim")
+            result = db.credentials(person)
+        elif action == "reject" and claim and person["status"] == "unclaimed":
+            if claim["photo"]:
+                staged_photo = db.DATA / "claim_photos" / claim["photo"]
+            person.pop("claim")
+            result = {"ok": True}
+        else:
+            raise HTTPException(409, "Η κατάσταση του προφίλ έχει αλλάξει.")
         tx.write(db.PEOPLE, people)
+    if staged_photo:
+        staged_photo.unlink(missing_ok=True)
     return result
 
 
@@ -518,66 +519,9 @@ def delete_person(pid: str):
     with db.transaction() as tx:
         people = tx.read(db.PEOPLE)
         person = find_person(people, pid)
-        replies = tx.read(db.REPLIES)
-        media = [
-            person["photo_url"],
-            *(r["video_url"] for r in replies if r["politician_id"] == pid),
-        ]
         tx.write(db.PEOPLE, [p for p in people if p["id"] != pid])
-        tx.write(db.REPLIES, [r for r in replies if r["politician_id"] != pid])
-        for name, sub in tx.submissions():
-            if sub["politician_flags"].pop(pid, None):
-                tx.write(name, sub)
-    for url in media:
-        db.remove_upload(url)
+    db.remove_upload(person["photo_url"])
     return {"ok": True}
-
-
-def remove_reply(rid, owner=None):
-    with db.transaction() as tx:
-        rows = tx.read(db.REPLIES)
-        record = next(
-            (
-                r
-                for r in rows
-                if r["id"] == rid and (owner is None or r["politician_id"] == owner)
-            ),
-            None,
-        )
-        if not record:
-            raise HTTPException(404, "Reply not found.")
-        tx.write(db.REPLIES, [r for r in rows if r["id"] != rid])
-    db.remove_upload(record["video_url"])
-    return {"ok": True}
-
-
-@app.delete("/api/admin/replies/{rid}", dependencies=[Depends(admin)])
-def moderate(rid: str):
-    return remove_reply(rid)
-
-
-@app.delete("/api/politician/replies/{rid}")
-def unpublish(rid: str, pid=Depends(politician)):
-    return remove_reply(rid, pid)
-
-
-@app.get("/api/admin/export/llm-dataset", dependencies=[Depends(admin)])
-def export_dataset(format: Literal["json", "jsonl"] = "json"):
-    with db.transaction() as tx:
-        if format == "jsonl":
-            return Response(
-                (db.DATA / db.FEED).read_bytes(),
-                media_type="application/x-ndjson",
-                headers={
-                    "Content-Disposition": 'attachment; filename="llm_research_feed.jsonl"'
-                },
-            )
-        return JSONResponse(
-            [s for _, s in tx.submissions()],
-            headers={
-                "Content-Disposition": 'attachment; filename="citizen-submissions.json"'
-            },
-        )
 
 
 @app.get("/admin")
@@ -596,16 +540,22 @@ def home():
     return FileResponse(STATIC / "index.html")
 
 
+@app.get("/submit.html", include_in_schema=False)
+def old_claim_page(request: Request):
+    query = request.url.query
+    return RedirectResponse("/claim-profile.html" + ("?" + query if query else ""), status_code=308)
+
+
 @app.get("/{page}.html")
 def page(page: str):
     if page not in {
         "index",
         "politicians",
         "profile",
-        "submit",
+        "claim-profile",
         "politician-login",
         "mission",
         "admin-login",
     }:
-        raise HTTPException(404, "Page not found.")
+        raise HTTPException(404, "Η σελίδα δεν βρέθηκε.")
     return FileResponse(STATIC / (page + ".html"))

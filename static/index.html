@@ -1,48 +1,61 @@
 <!doctype html>
-<html lang="en">
+<html lang="el">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>The public square · CiviConnect</title>
-  <link rel="icon" href="/static/assets/favicon.svg" type="image/svg+xml">
-  <script src="/static/js/theme.js"></script>
-  <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="stylesheet" href="/static/css/home.css">
-  <script type="module" src="/static/js/home.js"></script>
+  <title>CiviConnect</title>
+  <link rel="icon" href="/static/assets/favicon.svg?v=brand-mark" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap">
+  <link rel="stylesheet" href="/static/css/style.css?v=brand-mark">
+  <link rel="stylesheet" href="/static/css/home.css?v=visual-density">
+  <script type="module" src="/static/js/home.js?v=demo-search"></script>
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip" href="#main">Μετάβαση στο περιεχόμενο</a>
   <header id="site-header"></header>
   <main id="main" class="wrap">
     <section id="ask" class="ask-hero" aria-labelledby="ask-title">
-      <div class="eyebrow"><span class="rule"></span><span data-election-area>Local election hub</span></div>
-      <h1 id="ask-title">What’s on your mind<span class="period">?</span></h1>
-      <p>Send your questions, concerns, and ideas to your local candidates.</p>
+      <div class="eyebrow"><span class="rule"></span><span data-election-area>Δημοτικές εκλογές</span></div>
+      <h1 id="ask-title">Τι συμβαίνει στην Αθήνα;</h1>
+      <p>Ρωτήστε για τη γειτονιά σας, τις αποφάσεις του Δήμου και τα θέματα που απασχολούν την πόλη. Δείτε τις απαντήσεις μαζί με τις πηγές τους.</p>
       <form id="citizen-form">
         <div class="composer">
-          <textarea name="content" rows="2" required maxlength="3000" aria-label="Your message to local candidates" placeholder="Ask a question or share a concern…"></textarea>
-          <div class="composer-tools"><span id="char-count">0 / 3,000</span><button type="submit" class="btn strong"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#send"/></svg> Send</button></div>
+          <textarea name="content" rows="2" required maxlength="3000" aria-label="Η ερώτησή σας για την Αθήνα" placeholder="Π.χ. Ποιοι ασχολούνται με την αποκομιδή απορριμμάτων;"></textarea>
+          <div class="composer-tools"><span id="char-count">0 / 3.000</span><button type="submit" class="btn strong"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#send"/></svg> Αποστολή</button></div>
         </div>
         <p class="status" role="status"></p>
       </form>
-    </section>
-    <section id="replies" aria-labelledby="replies-heading">
-      <div class="section-head"><div class="heading-group"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#video"/></svg></span><h2 id="replies-heading">Candidate video replies</h2></div>
-      <div class="carousel-nav"><span id="position"></span><button class="circle" id="prev" aria-label="Previous reply"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#left"/></svg></button><button class="circle" id="next" aria-label="Next reply"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#right"/></svg></button></div></div>
-      <div id="reply-track" aria-label="Video replies" class="reply-track" tabindex="0"></div>
+      <div id="civic-answer" hidden></div>
     </section>
     <section class="featured-people" aria-labelledby="people-title">
-      <div class="section-head"><div class="heading-group"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#users"/></svg></span><h2 id="people-title">Featured politicians</h2></div></div>
+      <div class="section-head featured-heading">
+        <div class="heading-group"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#users"/></svg></span><h2 id="people-title">Εκπρόσωποι του Δήμου Αθηναίων</h2></div>
+        <div id="people-rotation" class="people-rotation" hidden>
+          <span id="people-remaining" role="timer" aria-live="off"></span>
+        </div>
+      </div>
       <div id="featured-grid"></div>
-      <div class="directory-action"><a class="btn" href="/politicians.html">View all politicians</a></div>
+      <div class="directory-action"><a class="btn" href="/politicians.html">Όλα τα προφίλ</a></div>
+    </section>
+    <section id="replies" aria-labelledby="replies-heading">
+      <div class="section-head"><div class="heading-group"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#video"/></svg></span><h2 id="replies-heading">Βίντεο από το κανάλι μας</h2></div>
+      <div class="carousel-nav"><span id="position"></span><button class="circle" id="prev" aria-label="Προηγούμενο βίντεο"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#left"/></svg></button><button class="circle" id="next" aria-label="Επόμενο βίντεο"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#right"/></svg></button></div></div>
+      <div id="reply-track" aria-label="Βίντεο του καναλιού" class="reply-track" tabindex="0"></div>
     </section>
   </main>
   <footer id="site-footer">
-    <div class="footer-election wrap" aria-label="Election countdown">
-      <span class="election-label"><svg class="icon" aria-hidden="true"><use href="/static/assets/icons.svg#calendar"/></svg><strong id="election-label">Election day</strong> <span id="election-date"></span></span>
-      <span class="footer-clock" role="timer"><span><b id="time-Days">––</b>days</span> <span><b id="time-Hours">––</b>hours</span> <span><b id="time-Minutes">––</b>minutes</span> <span><b id="time-Seconds">––</b>seconds</span></span>
-    </div>
+    <section class="footer-election" hidden aria-labelledby="election-label">
+      <h2 id="election-label">Επόμενες δημοτικές εκλογές</h2>
+      <div class="footer-clock" role="timer" aria-label="Χρόνος μέχρι την ημέρα των εκλογών">
+        <span><b id="time-Days"></b>ημέρες</span>
+        <span><b id="time-Hours"></b>ώρες</span>
+        <span><b id="time-Minutes"></b>λεπτά</span>
+        <span><b id="time-Seconds"></b><abbr title="δευτερόλεπτα">δευτ.</abbr></span>
+      </div>
+    </section>
   </footer>
 </body>
 </html>

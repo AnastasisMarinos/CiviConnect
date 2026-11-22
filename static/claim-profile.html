@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Διεκδίκηση προφίλ · CiviConnect</title>
+  <link rel="icon" href="/static/assets/favicon.svg?v=brand-mark" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap">
+  <link rel="stylesheet" href="/static/css/style.css?v=brand-mark">
+  <script type="module" src="/static/js/claim-profile.js?v=workspace-cleanup"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Μετάβαση στο περιεχόμενο</a>
+  <header id="site-header"></header>
+  <main id="main" class="wrap">
+    <div class="intro"><div><h1>Διεκδίκηση προφίλ</h1><p>Βρείτε το προφίλ σας στον κατάλογο του Δήμου Αθηναίων. Η ομάδα του CiviConnect θα επαληθεύσει την ταυτότητά σας πριν ενεργοποιήσει την πρόσβαση.</p></div><a class="btn" href="/politician-login.html">Σύνδεση</a></div>
+    <form id="application" class="panel form-stack wide-form" enctype="multipart/form-data">
+      <label>Προφίλ<select name="person" required><option value="">Επιλέξτε το προφίλ σας</option></select></label>
+      <label>Email επαλήθευσης<input name="verification_email" type="email" required maxlength="254" autocomplete="email"><small>Χρησιμοποιήστε το υπηρεσιακό σας email, αν διαθέτετε.</small></label>
+      <label>Φωτογραφία προφίλ <span class="optional">Προαιρετικό</span><input type="file" name="photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG ή WebP, έως 8 MB.</small></label>
+      <div id="detail-fields"></div>
+      <button class="btn primary" disabled>Υποβολή αιτήματος</button>
+      <p class="status" role="status"></p>
+    </form>
+  </main>
+  <footer id="site-footer"></footer>
+</body>
+</html>
