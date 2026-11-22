@@ -4,19 +4,21 @@ set "CIVICONNECT_PROJECT_OPEN="
 set "step=opening the project folder"
 pushd "%~dp0" || goto failed
 set "CIVICONNECT_PROJECT_OPEN=1"
-set "step=checking Python 3.11 or newer"
+set "step=checking Python 3.11 to 3.13"
 if exist "venv\Scripts\python.exe" goto checkenv
-set "PY_CMD=py -3"
-%PY_CMD% -c "import sys; sys.exit(sys.version_info < (3,11))" >nul 2>nul
-if not errorlevel 1 goto makeenv
-set "PY_CMD=python"
-%PY_CMD% -c "import sys; sys.exit(sys.version_info < (3,11))" || goto failed
+set "PY_CMD="
+for %%V in (3.13 3.12 3.11) do (
+  if not defined PY_CMD (
+    py -%%V -c "import sys" >nul 2>nul && set "PY_CMD=py -%%V"
+  )
+)
+if not defined PY_CMD goto nopython
 :makeenv
 set "step=creating the Python environment"
 %PY_CMD% -m venv venv || goto failed
 :checkenv
 set "PY=%~dp0venv\Scripts\python.exe"
-"%PY%" -c "import sys; sys.exit(sys.version_info < (3,11))" || goto failed
+"%PY%" -c "import sys; sys.exit(not ((3,11) <= sys.version_info[:2] <= (3,13)))" || goto wrongvenv
 if /i "%~1"=="status" goto server_control
 if /i "%~1"=="stop" goto server_control
 title CiviConnect - Local server
@@ -46,6 +48,14 @@ set "step=checking the local web server"
 :done
 popd
 exit /b 0
+:nopython
+echo Python 3.11, 3.12 or 3.13 is required. Newer versions are not supported yet.
+echo Install one from https://www.python.org/downloads/ and run start.bat again.
+goto failed
+:wrongvenv
+echo The existing venv folder was built with an unsupported Python version.
+echo Delete the venv folder and run start.bat again.
+goto failed
 :failed
 echo CiviConnect failed while %step%.
 if defined CIVICONNECT_PROJECT_OPEN popd
