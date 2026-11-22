@@ -12,7 +12,7 @@ for %%V in (3.13 3.12 3.11) do (
     py -%%V -c "import sys" >nul 2>nul && set "PY_CMD=py -%%V"
   )
 )
-if not defined PY_CMD goto nopython
+if not defined PY_CMD goto installpython
 :makeenv
 set "step=creating the Python environment"
 %PY_CMD% -m venv venv || goto failed
@@ -48,6 +48,22 @@ set "step=checking the local web server"
 :done
 popd
 exit /b 0
+:installpython
+where winget >nul 2>nul || goto nopython
+echo Python 3.11, 3.12 or 3.13 was not found on this PC.
+choice /c YN /m "Install Python 3.12 now using winget"
+if errorlevel 2 goto nopython
+set "step=installing Python 3.12"
+winget install -e --id Python.Python.3.12 --scope user --accept-package-agreements --accept-source-agreements || goto failed
+set "PY_CMD="
+if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+if not defined PY_CMD py -3.12 -c "import sys" >nul 2>nul && set "PY_CMD=py -3.12"
+if not defined PY_CMD goto restartneeded
+goto makeenv
+:restartneeded
+echo Python was installed, but this window cannot see it yet.
+echo Close this window and run start.bat again.
+goto failed
 :nopython
 echo Python 3.11, 3.12 or 3.13 is required. Newer versions are not supported yet.
 echo Install one from https://www.python.org/downloads/ and run start.bat again.
